@@ -4,7 +4,7 @@
   "description": "Bidirectional markdown folder sync for Darin collections",
   "type": "module",
   "bin": {
-    "darin": "./dist/index.js"
+    "darin": "dist/index.js"
   },
   "files": [
     "dist"
@@ -26,6 +26,14 @@
     "cli"
   ],
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/manojbajaj95/darin-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/manojbajaj95/darin-cli/issues"
+  },
+  "homepage": "https://github.com/manojbajaj95/darin-cli#readme",
   "dependencies": {
     "commander": "^14.0.0",
     "fast-glob": "^3.3.3"
