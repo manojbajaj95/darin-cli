@@ -1,0 +1,38 @@
+{
+  "name": "@getdarin/cli",
+  "version": "0.2.0",
+  "description": "Bidirectional markdown folder sync for Darin collections",
+  "type": "module",
+  "bin": {
+    "darin": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('dist/index.js',0o755)\"",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "darin",
+    "markdown",
+    "sync",
+    "cli"
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "commander": "^14.0.0",
+    "fast-glob": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
