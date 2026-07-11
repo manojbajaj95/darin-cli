@@ -131,6 +131,14 @@ npm run build
 node dist/index.js --help
 ```
 
+## Release
+
+Releases are automated with [Release Please](https://github.com/googleapis/release-please) (config under `.github/`).
+
+- Conventional Commits on `main` open/update a release PR
+- Merging that PR tags a GitHub Release and publishes `@getdarin/cli` to npm via OIDC trusted publishing
+- One-time npm setup: package **Trusted publishing** → repo `manojbajaj95/darin-cli`, workflow `release-please.yml` (Node 24). The first publish must be manual before OIDC works.
+
 ## License
 
 Apache-2.0

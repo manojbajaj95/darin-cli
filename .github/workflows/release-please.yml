@@ -1,0 +1,63 @@
+name: release-please
+
+# https://github.com/googleapis/release-please
+# https://github.com/googleapis/release-please-action
+#
+# Release Please opens/updates a Release PR with CHANGELOG + version bump.
+# Merge that PR → GitHub Release + tag. npm publish runs when release is created.
+#
+# Commits must follow Conventional Commits: feat:, fix:, docs:, etc.
+# https://www.conventionalcommits.org/
+#
+# npm publish uses trusted publishing (OIDC) — no NPM_TOKEN secret needed.
+# One-time setup on npmjs.com: package "@getdarin/cli" → Settings → Trusted publishing
+# → GitHub Actions → repo manojbajaj95/darin-cli, workflow release-please.yml.
+# Requires npm CLI >=11.5.1 (bundled with Node 24), hence node-version 24 below.
+# Note: OIDC can't bootstrap a package's first-ever publish — that one publish
+# has to happen manually (npm publish from a maintainer's machine) before the
+# trusted publisher can be configured.
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .github/release-please-config.json
+          manifest-file: .github/release-please-manifest.json
+
+      - uses: actions/checkout@v4
+        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        with:
+          ref: ${{ steps.release.outputs['.--tag_name'] }}
+
+      - uses: actions/setup-node@v4
+        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install, test, and build
+        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        run: |
+          npm install
+          npm test
+          npm run build
+          node dist/index.js --version
+
+      - name: Publish to npm (trusted publishing / OIDC)
+        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        run: npm publish --access public --provenance
