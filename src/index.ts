@@ -9,7 +9,7 @@ const program = new Command();
 program
   .name("darin")
   .description("Bidirectional markdown folder sync for Darin collections")
-  .version("0.1.8"); // x-release-please-version
+  .version("0.1.9"); // x-release-please-version
 
 function collectFlags(cmd: Command): GlobalFlags {
   const opts = cmd.optsWithGlobals() as {

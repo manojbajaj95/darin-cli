@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/manojbajaj95/darin-cli/compare/v0.1.8...v0.1.9) (2026-07-11)
+
+
+### Bug Fixes
+
+* add repository metadata for npm provenance publish ([577d743](https://github.com/manojbajaj95/darin-cli/commit/577d743e1eb7300b4cbd3ae2341075cec9eaa76c))
+
 ## [0.1.8](https://github.com/manojbajaj95/darin-cli/compare/v0.1.7...v0.1.8) (2026-07-11)
 
 
