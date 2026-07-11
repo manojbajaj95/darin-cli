@@ -48,18 +48,18 @@ jobs:
           manifest-file: .github/release-please-manifest.json
 
       - uses: actions/checkout@v4
-        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        if: ${{ steps.release.outputs.release_created }}
         with:
-          ref: ${{ steps.release.outputs['.--tag_name'] }}
+          ref: ${{ steps.release.outputs.tag_name }}
 
       - uses: actions/setup-node@v4
-        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        if: ${{ steps.release.outputs.release_created }}
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
       - name: Install, test, and build
-        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        if: ${{ steps.release.outputs.release_created }}
         run: |
           npm install
           npm test
@@ -67,5 +67,5 @@ jobs:
           node dist/index.js --version
 
       - name: Publish to npm (trusted publishing / OIDC)
-        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        if: ${{ steps.release.outputs.release_created }}
         run: npm publish --access public --provenance
