@@ -47,12 +47,6 @@ export function titleFromPath(relPath: string): string {
   return base;
 }
 
-export function titleFromBody(body: string, fallback: string): string {
-  const heading = /^#\s+(.+)$/m.exec(body);
-  if (heading) return heading[1].trim();
-  return fallback;
-}
-
 /** Path segments for hierarchy, excluding the .md filename stem as last segment via path helpers. */
 export function pathSegments(relPath: string): string[] {
   const posix = toPosix(relPath);
@@ -77,7 +71,7 @@ export async function walkLocalMarkdown(dir: string): Promise<LocalDoc[]> {
     const raw = await readFile(absPath, "utf8");
     const st = await stat(absPath);
     const { body, id } = parseFrontmatter(raw);
-    const title = titleFromBody(body, titleFromPath(relPath));
+    const title = titleFromPath(relPath);
     docs.push({
       relPath,
       absPath,

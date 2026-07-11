@@ -6,7 +6,6 @@ import { flattenTreeToPaths, treePathIndex } from "./remote.js";
 import {
   parseFrontmatter,
   pathSegments,
-  titleFromBody,
   titleFromPath,
 } from "./local.js";
 import type { NavigationNode } from "./client.js";
@@ -31,10 +30,10 @@ describe("local path helpers", () => {
     expect(parsed.body).toBe("# Hello\n");
   });
 
-  it("derives path segments and titles", () => {
+  it("derives path segments and titles from filenames", () => {
     expect(pathSegments("guides/setup.md")).toEqual(["guides", "setup"]);
     expect(titleFromPath("guides/setup.md")).toBe("setup");
-    expect(titleFromBody("# Setup Guide\n\nbody", "setup")).toBe("Setup Guide");
+    expect(titleFromPath("Setup Guide.md")).toBe("Setup Guide");
   });
 });
 
