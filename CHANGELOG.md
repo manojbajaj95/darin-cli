@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/manojbajaj95/darin-cli/compare/v0.1.10...v0.1.11) (2026-07-11)
+
+
+### Bug Fixes
+
+* preserve local frontmatter and reconcile after push ([5e76ca6](https://github.com/manojbajaj95/darin-cli/commit/5e76ca67468f601db48aa46a8b49e8e5a5b4fb81))
+
 ## [0.1.10](https://github.com/manojbajaj95/darin-cli/compare/v0.1.9...v0.1.10) (2026-07-11)
 
 
