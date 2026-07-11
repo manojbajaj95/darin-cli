@@ -10,9 +10,9 @@ export interface LocalDoc {
   relPath: string;
   absPath: string;
   title: string;
-  /** Body synced to remote (frontmatter stripped). */
+  /** Body synced to remote (preamble + frontmatter stripped). */
   body: string;
-  /** Full file contents including frontmatter. */
+  /** Full file contents including preamble/frontmatter. */
   raw: string;
   /** Optional document id from frontmatter. */
   id?: string;
@@ -20,26 +20,101 @@ export interface LocalDoc {
   hash: string;
 }
 
+export interface ParsedMarkdown {
+  /** Leading blank lines / HTML comments before frontmatter (local-only). */
+  preamble?: string;
+  /** YAML frontmatter contents without the --- fences. */
+  frontmatter?: string;
+  /** Markdown body synced to remote. */
+  body: string;
+  /** Document id from frontmatter, if present. */
+  id?: string;
+}
+
 export function toPosix(p: string): string {
   return p.split(path.sep).join("/");
 }
 
-export function parseFrontmatter(raw: string): {
-  body: string;
-  id?: string;
-  frontmatter?: string;
-} {
-  const match = FRONTMATTER_RE.exec(raw);
+/**
+ * Split optional leading blank lines and HTML comments from the rest of the file.
+ * Only used when a frontmatter block follows; otherwise the whole file is body.
+ */
+export function splitPreamble(raw: string): { preamble: string; rest: string } {
+  let i = 0;
+  const len = raw.length;
+
+  while (i < len) {
+    const blank = /^[ \t]*\r?\n/.exec(raw.slice(i));
+    if (blank) {
+      i += blank[0].length;
+      continue;
+    }
+
+    if (raw.startsWith("<!--", i)) {
+      const end = raw.indexOf("-->", i + 4);
+      if (end === -1) break;
+      i = end + 3;
+      const trail = /^[ \t]*\r?\n?/.exec(raw.slice(i));
+      if (trail) i += trail[0].length;
+      continue;
+    }
+
+    break;
+  }
+
+  return { preamble: raw.slice(0, i), rest: raw.slice(i) };
+}
+
+export function parseFrontmatter(raw: string): ParsedMarkdown {
+  const { preamble, rest } = splitPreamble(raw);
+  const match = FRONTMATTER_RE.exec(rest);
   if (!match) return { body: raw };
 
   const fm = match[1];
-  const body = raw.slice(match[0].length);
+  const body = rest.slice(match[0].length);
   const idMatch = /^id:\s*["']?([^\s"']+)["']?\s*$/m.exec(fm);
   return {
+    preamble: preamble.length > 0 ? preamble : undefined,
+    frontmatter: fm,
     body,
     id: idMatch?.[1],
-    frontmatter: fm,
   };
+}
+
+function withIdInFrontmatter(frontmatter: string | undefined, id: string): string {
+  if (frontmatter !== undefined) {
+    return /^id:/m.test(frontmatter)
+      ? frontmatter.replace(/^id:\s*.*$/m, `id: ${id}`)
+      : `id: ${id}\n${frontmatter}`;
+  }
+  return `id: ${id}`;
+}
+
+/** Rebuild a local markdown file from parts (preamble + frontmatter stay local-only). */
+export function composeLocalMarkdown(opts: {
+  preamble?: string;
+  frontmatter?: string;
+  body: string;
+  id?: string;
+}): string {
+  const parts: string[] = [];
+
+  if (opts.preamble) {
+    parts.push(opts.preamble.endsWith("\n") ? opts.preamble : `${opts.preamble}\n`);
+  }
+
+  let fm = opts.frontmatter;
+  if (opts.id) {
+    fm = withIdInFrontmatter(fm, opts.id);
+  }
+
+  if (fm !== undefined) {
+    parts.push(`---\n${fm}\n---\n`);
+  }
+
+  parts.push(opts.body);
+  const content = parts.join("");
+  return content.endsWith("\n") ? content : `${content}\n`;
 }
 
 export function titleFromPath(relPath: string): string {
@@ -98,14 +173,14 @@ export async function writeLocalMarkdown(
   let content = body;
   if (opts?.id) {
     const parsed = parseFrontmatter(opts.existingRaw ?? "");
-    if (parsed.frontmatter !== undefined) {
-      const fm = /^id:/m.test(parsed.frontmatter)
-        ? parsed.frontmatter.replace(/^id:\s*.*$/m, `id: ${opts.id}`)
-        : `id: ${opts.id}\n${parsed.frontmatter}`;
-      content = `---\n${fm}\n---\n${body}`;
-    } else {
-      content = `---\nid: ${opts.id}\n---\n${body}`;
-    }
+    content = composeLocalMarkdown({
+      preamble: parsed.preamble,
+      frontmatter: parsed.frontmatter,
+      body,
+      id: opts.id,
+    });
+  } else if (!content.endsWith("\n") && content.length > 0) {
+    content = `${content}\n`;
   }
 
   await writeFile(absPath, content.endsWith("\n") ? content : `${content}\n`, "utf8");
@@ -134,11 +209,13 @@ export async function deleteLocalFile(dir: string, relPath: string): Promise<voi
 
 export function withFrontmatterId(raw: string, id: string): string {
   const parsed = parseFrontmatter(raw);
-  if (parsed.frontmatter !== undefined) {
-    const fm = /^id:/m.test(parsed.frontmatter)
-      ? parsed.frontmatter.replace(/^id:\s*.*$/m, `id: ${id}`)
-      : `id: ${id}\n${parsed.frontmatter}`;
-    return `---\n${fm}\n---\n${parsed.body}`;
+  if (parsed.frontmatter !== undefined || parsed.preamble) {
+    return composeLocalMarkdown({
+      preamble: parsed.preamble,
+      frontmatter: parsed.frontmatter,
+      body: parsed.body,
+      id,
+    });
   }
-  return `---\nid: ${id}\n---\n${raw}`;
+  return composeLocalMarkdown({ body: raw, id });
 }

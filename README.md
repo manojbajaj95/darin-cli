@@ -114,6 +114,8 @@ Each run rebuilds state from scratch (no last-sync database):
 - Nested folders become nested documents via `parentDocumentId`
 - Intermediate folder segments create parent documents as needed
 - On create, the CLI writes `id: <uuid>` into YAML frontmatter so renames still rematch
+- Leading HTML comments before `---` are treated as a local preamble; YAML frontmatter is stripped from the synced body
+- After push create/update, the CLI re-fetches the document and rewrites the local body to match Darin’s normalized markdown (frontmatter/preamble preserved) so the next status is clean
 
 ## Environment
 

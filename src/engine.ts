@@ -1,4 +1,4 @@
-import type { DarinClient } from "./client.js";
+import type { DarinClient, Document } from "./client.js";
 import {
   type ClassifiedChange,
   type CommandMode,
@@ -6,10 +6,10 @@ import {
   summarize,
 } from "./classify.js";
 import type { GlobalFlags, SyncTarget } from "./config.js";
+import { contentHash } from "./hash.js";
 import {
   deleteLocalFile,
   walkLocalMarkdown,
-  withFrontmatterId,
   writeConflictFile,
   writeLocalMarkdown,
 } from "./local.js";
@@ -20,7 +20,6 @@ import {
   loadRemoteCollection,
   type RemoteDoc,
 } from "./remote.js";
-import { writeFile } from "node:fs/promises";
 
 export interface SyncContext {
   /** Absolute path to the local markdown folder for this target. */
@@ -77,6 +76,41 @@ export async function planSync(ctx: SyncContext): Promise<{
   return { changes, pairs, byPath, byId };
 }
 
+/**
+ * After a remote create/update, fetch server markdown and rewrite the local file
+ * so hashes match (Darin normalizes lists/escapes on import). Preserves local
+ * preamble + frontmatter.
+ */
+async function reconcileLocalAfterRemoteWrite(
+  ctx: SyncContext,
+  opts: {
+    relPath: string;
+    existingRaw: string;
+    doc: Document;
+    byPath: Map<string, RemoteDoc>;
+  },
+): Promise<void> {
+  const info = await ctx.client.documentInfo(opts.doc.id);
+  const text = info.text ?? "";
+  const hash = contentHash(text);
+
+  opts.byPath.set(opts.relPath, {
+    id: info.id,
+    title: info.title,
+    relPath: opts.relPath,
+    parentDocumentId: info.parentDocumentId,
+    updatedAt: info.updatedAt,
+    revision: info.revision,
+    text,
+    hash,
+  });
+
+  await writeLocalMarkdown(ctx.dir, opts.relPath, text, {
+    id: info.id,
+    existingRaw: opts.existingRaw,
+  });
+}
+
 export async function applySync(ctx: SyncContext): Promise<SyncResult> {
   const dryRun = Boolean(ctx.flags.dryRun) || ctx.mode === "status";
   const { changes, pairs, byPath } = await planSync(ctx);
@@ -110,29 +144,29 @@ export async function applySync(ctx: SyncContext): Promise<SyncResult> {
           parentDocumentId: parentId,
           publish: true,
         });
-        byPath.set(change.relPath, {
-          id: created.id,
-          title: created.title,
+        await reconcileLocalAfterRemoteWrite(ctx, {
           relPath: change.relPath,
-          parentDocumentId: created.parentDocumentId,
-          updatedAt: created.updatedAt,
-          revision: created.revision,
-          text: pair.local.body,
-          hash: pair.local.hash,
+          existingRaw: pair.local.raw,
+          doc: created,
+          byPath,
         });
-        const next = withFrontmatterId(pair.local.raw, created.id);
-        await writeFile(pair.local.absPath, next.endsWith("\n") ? next : `${next}\n`, "utf8");
         break;
       }
 
       case "update_remote": {
         if (!pair.local || !pair.remote) break;
         if (dryRun) break;
-        await ctx.client.documentUpdate({
+        const updated = await ctx.client.documentUpdate({
           id: pair.remote.id,
           title: pair.local.title,
           text: pair.local.body,
           editMode: "replace",
+        });
+        await reconcileLocalAfterRemoteWrite(ctx, {
+          relPath: change.relPath,
+          existingRaw: pair.local.raw,
+          doc: updated,
+          byPath,
         });
         break;
       }

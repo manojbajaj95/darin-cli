@@ -7,6 +7,7 @@ import {
   parseFrontmatter,
   pathSegments,
   titleFromPath,
+  withFrontmatterId,
 } from "./local.js";
 import type { NavigationNode } from "./client.js";
 import type { LocalDoc } from "./local.js";
@@ -28,6 +29,32 @@ describe("local path helpers", () => {
     const parsed = parseFrontmatter(raw);
     expect(parsed.id).toBe("abc-123");
     expect(parsed.body).toBe("# Hello\n");
+  });
+
+  it("parses frontmatter after leading HTML comment preamble", () => {
+    const raw =
+      "<!-- SEED: keep local -->\n\n---\nname: Darin\ncolors:\n  bg: white\n---\n# Design\n";
+    const parsed = parseFrontmatter(raw);
+    expect(parsed.preamble).toBe("<!-- SEED: keep local -->\n\n");
+    expect(parsed.frontmatter).toBe("name: Darin\ncolors:\n  bg: white");
+    expect(parsed.body).toBe("# Design\n");
+    expect(parsed.id).toBeUndefined();
+  });
+
+  it("does not treat mid-document --- as frontmatter without a leading block", () => {
+    const raw = "# Title\n\n---\nnot: frontmatter\n---\nmore\n";
+    const parsed = parseFrontmatter(raw);
+    expect(parsed.frontmatter).toBeUndefined();
+    expect(parsed.body).toBe(raw);
+  });
+
+  it("preserves preamble when injecting id", () => {
+    const raw =
+      "<!-- note -->\n\n---\nname: X\n---\n# Body\n";
+    const next = withFrontmatterId(raw, "uuid-1");
+    expect(next).toBe(
+      "<!-- note -->\n\n---\nid: uuid-1\nname: X\n---\n# Body\n",
+    );
   });
 
   it("derives path segments and titles from filenames", () => {
