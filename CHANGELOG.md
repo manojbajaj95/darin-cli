@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.10](https://github.com/manojbajaj95/darin-cli/compare/v0.1.9...v0.1.10) (2026-07-11)
+
+
+### Bug Fixes
+
+* derive remote titles from local filenames ([d5e8412](https://github.com/manojbajaj95/darin-cli/commit/d5e8412e96f43df867a989219f7219a569e0cf38))
+
 ## [0.1.9](https://github.com/manojbajaj95/darin-cli/compare/v0.1.8...v0.1.9) (2026-07-11)
 
 
